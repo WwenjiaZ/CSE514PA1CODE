@@ -1,0 +1,571 @@
+---
+title: "CSE514 Programming Assignment 1"
+author: "Wenjia Zhang, 510260"
+date: "9/7/2023"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, out.width="70%", out.height="70%" )
+```
+
+```{r}
+library(readxl)
+Concrete_Data <- read_excel("/Users/Mika/Desktop/CSE514/PA1/Concrete_Data.xls")
+```
+
+# Introduction
+
+### Description/Formulation of the Problem
+
+  The topic of this Programming Assignment is to Design and implement a gradient descent algorithm or algorithms for regression. I will use gradient descent to perform linear regression and fit linear models for the given dataset. 
+  
+  The dataset for this Assignment is the Concrete Compressive Strength dataset in the UCI repository(https://archive.ics.uci.edu/ml/datasets/Concrete+Compressive+Strength). 
+  
+  There are 1030 instances, 9 attributes, no missing values in this dataset. The first 8 columns are 8 features, the last column is the response variable: concrete strength. I will use 900 instances for training and 130 instances for testing, randomly selected. After pre-processing the data, I'll fit Uni-variate linear regression models and multivariate linear regression models, and compare them to get results and conclusions.
+  
+  The goal of this assignment is analyze and understand how the concrete strength is impacted by 8 features. The results and conclusions could be worked on improving the concrete strength in civil engineering area.
+  
+ 
+
+
+### Description of normalizing/standardizing data
+
+  The data contains 8 features, and their scales are vary, which may influence the results of linear regression. According to the plot of the raw data, we can see there's some outliers. So I decide to standardize the data as a pre-processing step (i.e., transform the data to have mean zero and standard deviation one).
+  
+  To standardize each variable, I will use the formula $X_{standardized} = (X - mean(X)) / std(X))$ and write a function to convert the values of the data into z-scroe values.
+  
+  The plots of the data before and after standardization:
+
+```{r}
+#replace variable name in easier way
+raw_data <- Concrete_Data
+names(raw_data) <- c("Cement",
+                 "Blast_Furnace_Slag",
+                 "Fly_Ash",
+                 "Water",
+                 "Superplasticizer ",
+                 "Coarse_Aggregate",
+                 "Fine_Aggregate",
+                 "Age",
+                 "Concrete_strength")
+
+boxplot(raw_data, 
+        names=c('x1','x2','x3','x4','x5','x6','x7','x8','y'), 
+        main = " The Distribution of Feature Values before Processing"  )
+```
+
+```{r}
+#Standardize the data
+new_data <- raw_data
+new_data <- scale(new_data)
+
+#save as data frame `data1`
+new_data <- as.data.frame(new_data)
+
+#visualize the data after standardization
+boxplot(new_data, 
+        names=c('x1','x2','x3','x4','x5','x6','x7','x8','y'),
+        main = "The Distribution of Feature Values after Processing")
+```
+  
+
+  From two graphs, we can see that after standardization, the values were rescaled. The range of feature values became similar. Also all the features were transformed to have a mean 0 and standard deviation 1. Standardized data is much better to be used for analysis.
+
+
+### Details of Algorithm
+
+First of all, I randomly selected 900 instances for training and 130 instances for testing on the raw data, saved as `raw`_train` and `raw_test`. Then I did the same step on the pre-processed data.
+
+```{r}
+#Randomly select 900 training data and 130 testing data
+set.seed(12345)
+#raw data
+raw_train_index <- sample(1:nrow(raw_data), size = 900)
+raw_test_index <- setdiff(1:nrow(raw_data), raw_train_index)
+raw_train <- raw_data[raw_train_index, ]
+raw_test <- raw_data[raw_test_index, ]
+
+#pre-processed data
+new_train_index <- sample(1:nrow(new_data), size = 900)
+new_test_index <- setdiff(1:nrow(new_data), new_train_index)
+new_train <- new_data[new_train_index, ]
+new_test <- new_data[new_test_index, ]
+```
+
+####  Univariate linear regression
+
+For uni-variate linear regression, the formula $f(x)=mx+b$ is used for every feature, the selected training data would be used for calculation. Also using MSE as the loss function, which is not a stochastic gradient descent. 
+
+To apply the gradient descent algorithm:
+
+Initializing the coefficient and bias as 0. Setting the max iteration number as 1000 to use for stopping criterion, repeat until the max number is reached. 
+
+To choose the learning rate, I started from a really small number, then tried different number for each feature to see which number perform the best, and decide the learning rate.
+
+Then I calculated the MSE loss function. And I calculated the gradients of the cost function with respect to the parameters through the trained data points, and update the coefficient and bias parameters.
+
+After that. I calculate MSE and Variance for model on trained and tested data, then use those values to get variance explained on trained and tested data.
+
+
+
+#### Multivariate linear regression
+
+For uni-variate linear regression, I did the similar steps as for uni-variate linear regression. In this case, the formula $f(x)=(m \cdot  x)$ is using, where $m = (m_0, m_1, …, m_p)^T$, and $x = (1, x_1, …, x_p)^T$, with $m_0$ in place of b in the model. Similarly, the selected training data would be used for calculation. Also using MSE as the loss function, which is not a stochastic gradient descent. 
+
+To apply the gradient descent algorithm:
+
+Which is different from the uni-variate linear regression, I'll set predictors data value input in matrix form as $m$ in the matrix form.
+
+First, I assigned a parameter $m_i$ to each of the features, and initialized those parameters and a b parameter as 0. Setting the max iteration number as 1000 to use for stopping criterion, repeat until the max number is reached. 
+
+To choose the learning rate, I started from a small number, then tried different number. Present the result from the function to see which learning rate number perform the best, and I decide the learning rate.
+
+Then I calculated the MSE loss function. And I calculated the multiple gradients of the cost function through the trained data points, and update the parameters.
+
+After that. I calculate MSE and Variance for model on trained and tested data, then use those values to get variance explained on trained and tested data.
+
+### Pseudo-code of Algorithm
+
+####  Univariate linear regression
+
+    SET m = 0
+    SET b = 0
+    SET max_inter_num = 1000 
+    SET learning_rate 
+
+      FOR each interation
+        CALCULATE y_pred
+        CALCULATE grad_m
+        CALCULATE grad_b
+        CALCULATE updated_m
+        CALCULATE updated_b
+      END FOR
+  
+    CALCULATE predicted_y_train, predicted_y_test
+    CALCULATE MSE_train, MSE_test
+    CALCULATE Variance_train, Variance_test
+    CALCULATE VE_train, VE_test
+
+    RETURN Coefficients, VE_train, VE_test, Predictions
+
+#### Multivariate linear regression
+
+    SET mi = 0
+    SET b = 0
+    SET max_inter_num = 1000 
+    SET learning_rate 
+
+      FOR each interation
+        CALCULATE y_pred
+        CALCULATE grad_mi
+        CALCULATE grad_b
+        CALCULATE updated_mi
+        CALCULATE updated_b
+      END FOR
+  
+    CALCULATE predicted_y_train, predicted_y_test
+    CALCULATE MSE_train, MSE_test
+    CALCULATE Variance_train, Variance_test
+    CALCULATE VE_train, VE_test
+
+    RETURN Coefficients, VE_train, VE_test, Predictions
+
+# Results
+
+## Univariate linear regression
+```{r}
+lm <- function(x_train, y_train, x_test, y_test, iter = 1000, alpha){
+  # Initialize parameters
+  m <- 0
+  b <- 0
+  
+  n <- length(x_train)
+  
+  # calculate gradient descent
+  for(i in 1:iter){
+    y_pred <- m * x_train + b
+    grad_m <- (-2/n) * sum(x_train * (y_train - y_pred))  
+    grad_b <- (-2/n) * sum(y_train - y_pred)  
+    m <- m - alpha * grad_m  # Update m
+    b <- b - alpha * grad_b  # Update b
+  }
+  
+  # predictions
+  y_pred_train <- m * x_train + b
+  y_pred_test <- m * x_test + b
+  
+  # Calculate MSE, Variance and R-squared for training data
+  MSE_train <- sum((y_train - y_pred_train)^2) / n
+  Var_train <- sum((y_train - mean(y_train))^2) / n
+  r_squared_train <- 1 - (MSE_train / Var_train)
+  
+  # Calculate MSE, Variance and R-squared for test data
+  n_test = length(x_test)
+  MSE_test <- sum((y_test - y_pred_test)^2) / n_test
+  Var_test <- sum((y_test - mean(y_test))^2) / n_test
+  r_squared_test <- 1 - (MSE_test / Var_test)
+
+  # Return the coefficients, variance explained and predictions(for plot)
+  list(coefficients = c(m = m, b = b), VE_train = r_squared_train, VE_test = r_squared_test, y_pred_train= y_pred_train)
+}
+```
+
+### Raw Data
+
+##### 1. Cement
+```{r}
+lm1_raw <- lm(raw_train$Cement,raw_train$Concrete_strength, raw_test$Cement, raw_test$Concrete_strength, iter = 1000, alpha = 0.00001 )
+
+#coefficients and the VE
+lm1_raw[1:3]
+
+#plot the data
+plot(raw_train$Cement, raw_train$Concrete_strength, xlab = 'Cement',
+       ylab ="strength")
+lines(raw_train$Cement, lm1_raw$y_pred_train, col = "red")
+```
+
+
+
+
+
+##### 2. Blast_Furnace_Slag
+```{r}
+#raw data
+lm2_raw = lm(raw_train$Blast_Furnace_Slag,raw_train$Concrete_strength, raw_test$Blast_Furnace_Slag, raw_test$Concrete_strength, iter = 1000, a = 0.00001 )
+
+#coefficients and the VE
+lm2_raw[1:3]
+```
+
+```{r}
+#plot the data
+plot(raw_train$Blast_Furnace_Slag, raw_train$Concrete_strength, xlab = 'Blast Furnace Slag',
+       ylab ="strength")
+lines(raw_train$Blast_Furnace_Slag, lm2_raw$y_pred_train, col = "red")
+```
+
+##### 3. Fly Ash
+```{r}
+#raw data
+lm3_raw = lm(raw_train$Fly_Ash,raw_train$Concrete_strength, raw_test$Fly_Ash, raw_test$Concrete_strength, iter = 1000, a = 0.00001 )
+
+lm3_raw[1:3]
+```
+```{r}
+#plot the data
+plot(raw_train$Fly_Ash, raw_train$Concrete_strength, xlab = 'Fly Ash',
+       ylab ="strength")
+lines(raw_train$Fly_Ash, lm3_raw$y_pred_train, col = "red")
+```
+
+##### 4. Water
+```{r}
+#raw data
+lm4_raw = lm(raw_train$Water,raw_train$Concrete_strength, raw_test$Water, raw_test$Concrete_strength, iter = 1000, a = 0.00001 )
+
+lm4_raw[1:3]
+```
+```{r}
+#plot the data
+plot(raw_train$Water, raw_train$Concrete_strength, xlab = 'Water',
+       ylab ="strength")
+lines(raw_train$Water, lm4_raw$y_pred_train, col = "red")
+```
+
+##### 5. Superplasticizer
+```{r}
+lm5_raw = lm(raw_train$`Superplasticizer `,raw_train$Concrete_strength, raw_test$`Superplasticizer `, raw_test$Concrete_strength, iter = 1000, a = 0.01 )
+
+lm5_raw[1:3]
+```
+```{r}
+#plot the data
+plot(raw_train$`Superplasticizer `, raw_train$Concrete_strength, xlab = 'Superplasticizer',
+       ylab ="strength")
+lines(raw_train$`Superplasticizer `, lm5_raw$y_pred_train, col = "red")
+```
+
+##### 6. Coarse Aggregate
+```{r}
+lm6_raw = lm(raw_train$Coarse_Aggregate,raw_train$Concrete_strength, raw_test$Coarse_Aggregate, raw_test$Concrete_strength, iter = 1000, a = 0.0000001 )
+
+lm6_raw[1:3]
+```
+```{r}
+#plot the data
+plot(raw_train$Coarse_Aggregate, raw_train$Concrete_strength, xlab = 'Coarse Aggregate',
+       ylab ="Strength")
+lines(raw_train$Coarse_Aggregate, lm6_raw$y_pred_train, col = "red")
+```
+
+##### 7. Fine Aggregate
+```{r}
+lm7_raw = lm(raw_train$Fine_Aggregate,raw_train$Concrete_strength, raw_test$Fine_Aggregate, raw_test$Concrete_strength, iter = 1000, a = 0.000001 )
+
+lm7_raw[1:3]
+```
+
+```{r}
+#plot the data
+plot(raw_train$Fine_Aggregate, raw_train$Concrete_strength, xlab = 'Fine Aggregate',
+       ylab ="Strength")
+lines(raw_train$Fine_Aggregate, lm7_raw$y_pred_train, col = "red")
+```
+
+##### 8. Age
+```{r}
+lm8_raw = lm(raw_train$Age,raw_train$Concrete_strength, raw_test$Age, raw_test$Concrete_strength, iter = 1000, a = 0.0001 )
+
+lm8_raw[1:3]
+```
+```{r}
+#plot the data
+plot(raw_train$Age, raw_train$Concrete_strength, xlab = 'Age',
+       ylab ="Strength")
+lines(raw_train$Age, lm8_raw$y_pred_train, col = "red")
+```
+
+### Pre-processed Data
+
+##### 1. Cement
+```{r}
+lm1_new <- lm(new_train$Cement,new_train$Concrete_strength, new_test$Cement, new_test$Concrete_strength, iter = 1000, alpha = 0.01 )
+
+#coefficients and the VE
+lm1_new[1:3]
+
+#plot the data
+plot(new_train$Cement, new_train$Concrete_strength, xlab = 'Cement',
+       ylab ="strength")
+lines(new_train$Cement, lm1_new$y_pred_train, col = "red")
+```
+
+
+##### 2. Blast_Furnace_Slag
+```{r}
+#new data
+lm2_new = lm(new_train$Blast_Furnace_Slag,new_train$Concrete_strength, new_test$Blast_Furnace_Slag, new_test$Concrete_strength, iter = 1000, a = 0.001 )
+
+#coefficients and the VE
+lm2_new[1:3]
+```
+
+```{r}
+#plot the data
+plot(new_train$Blast_Furnace_Slag, new_train$Concrete_strength, xlab = 'Blast Furnace Slag',
+       ylab ="strength")
+lines(new_train$Blast_Furnace_Slag, lm2_new$y_pred_train, col = "red")
+```
+
+##### 3. Fly Ash
+```{r}
+#new data
+lm3_new = lm(new_train$Fly_Ash,new_train$Concrete_strength, new_test$Fly_Ash, new_test$Concrete_strength, iter = 1000, a = 0.001 )
+
+lm3_new[1:3]
+```
+```{r}
+#plot the data
+plot(new_train$Fly_Ash, new_train$Concrete_strength, xlab = 'Fly Ash',
+       ylab ="strength")
+lines(new_train$Fly_Ash, lm3_new$y_pred_train, col = "red")
+```
+
+##### 4. Water
+```{r}
+#new data
+lm4_new = lm(new_train$Water,new_train$Concrete_strength, new_test$Water, new_test$Concrete_strength, iter = 1000, a = 0.01 )
+
+lm4_new[1:3]
+```
+```{r}
+#plot the data
+plot(new_train$Water, new_train$Concrete_strength, xlab = 'Water',
+       ylab ="strength")
+lines(new_train$Water, lm4_new$y_pred_train, col = "red")
+```
+
+##### 5. Superplasticizer
+```{r}
+lm5_new = lm(new_train$`Superplasticizer `,new_train$Concrete_strength, new_test$`Superplasticizer `, new_test$Concrete_strength, iter = 1000, a = 0.1 )
+
+lm5_new[1:3]
+```
+```{r}
+#plot the data
+plot(new_train$`Superplasticizer `, new_train$Concrete_strength, xlab = 'Superplasticizer',
+       ylab ="strength")
+lines(new_train$`Superplasticizer `, lm5_new$y_pred_train, col = "red")
+```
+
+##### 6. Coarse Aggregate
+```{r}
+lm6_new = lm(new_train$Coarse_Aggregate,new_train$Concrete_strength, new_test$Coarse_Aggregate, new_test$Concrete_strength, iter = 1000, a = 0.1 )
+
+lm6_new[1:3]
+```
+```{r}
+#plot the data
+plot(new_train$Coarse_Aggregate, new_train$Concrete_strength, xlab = 'Coarse Aggregate',
+       ylab ="Strength")
+lines(new_train$Coarse_Aggregate, lm6_new$y_pred_train, col = "red")
+```
+
+##### 7. Fine Aggregate
+```{r}
+lm7_new = lm(new_train$Fine_Aggregate,new_train$Concrete_strength, new_test$Fine_Aggregate, new_test$Concrete_strength, iter = 1000, a = 0.1 )
+
+lm7_new[1:3]
+```
+
+```{r}
+#plot the data
+plot(new_train$Fine_Aggregate, new_train$Concrete_strength, xlab = 'Fine Aggregate',
+       ylab ="Strength")
+lines(new_train$Fine_Aggregate, lm7_new$y_pred_train, col = "red")
+```
+
+##### 8. Age
+```{r}
+lm8_new = lm(new_train$Age,new_train$Concrete_strength, new_test$Age, new_test$Concrete_strength, iter = 1000, a = 0.1 )
+
+lm8_new[1:3]
+```
+```{r}
+#plot the data
+plot(new_train$Age, new_train$Concrete_strength, xlab = 'Age',
+       ylab ="Strength")
+lines(new_train$Age, lm8_new$y_pred_train, col = "red")
+```
+
+## Multivariate linear regression
+
+```{r}
+#function for multivariate
+mlm <- function(x_train, y_train, x_test, y_test, iter = 1000, alpha ){
+  
+  # Initialize parameters
+  m <- rep(0, ncol(x_train))
+  b <- 0
+  
+  n <- nrow(x_train)
+  
+  # calculate gradient descent
+  for(i in 1:iter){
+    y_pred <- x_train %*% m + b
+    residuals <- y_train - y_pred
+    grad_m <- (-2/n) * colSums(sweep(x_train, 2, residuals, FUN="*"))
+    grad_b <- (-2/n) * sum(residuals) 
+    m <- m - alpha * grad_m  # Update m
+    b <- b - alpha * grad_b  # Update b
+  }
+  
+  # Predictions
+  y_pred_train <- x_train %*% m + b
+  y_pred_test <- x_test %*% m + b
+    
+  # Calculate MSE, Variance and R-squared for training data
+  MSE_train <- sum((y_train - y_pred_train)^2) / n
+  Var_train <- sum((y_train - mean(y_train))^2) / n
+  r_squared_train <- 1 - (MSE_train / Var_train)
+  
+  # Calculate MSE, Variance and R-squared for test data
+  n_test = nrow(x_test)
+  MSE_test <- sum((y_test - y_pred_test)^2) / n_test
+  Var_test <- sum((y_test - mean(y_test))^2) / n_test
+  r_squared_test <- 1 - (MSE_test / Var_test)
+
+  # Return the coefficients, variance explained and predictions(for plot)
+  list(coefficients = c(m = m, b = b), VE_train = r_squared_train, VE_test = r_squared_test)
+}
+```
+
+
+
+### Raw Data
+```{r, warning=FALSE}
+# Convert the data input to matrix form
+x_raw_train = as.matrix(raw_train[,1:8])
+y_raw_train = as.matrix(raw_train[,9])
+x_raw_test = as.matrix(raw_test[,1:8])
+y_raw_test = as.matrix(raw_test[,9])
+
+lm9_raw = mlm(x_raw_train, y_raw_train, x_raw_test, y_raw_test, iter = 1000, alpha = 0.000000001)
+
+lm9_raw[1:3]
+```
+
+### Pre-processed Data
+```{r, warning=FALSE}
+x_new_train = as.matrix(new_train[,1:8])
+y_new_train = as.matrix(new_train[,9])
+x_new_test = as.matrix(new_test[,1:8])
+y_new_test = as.matrix(new_test[,9])
+
+lm9_new = mlm(x_new_train, y_new_train, x_new_test, y_new_test, iter = 1000, alpha = 0.0004)
+
+lm9_new[1:3]
+```
+
+
+
+
+# Discussion
+
+### Compare and Contrast Models
+
+```{r}
+raw_ve_train <-as.numeric(c(lm1_raw[2],lm3_raw[2],lm3_raw[2],lm4_raw[2],lm5_raw[2], lm6_raw[2],lm7_raw[2], lm8_raw[2],lm9_raw[2]))
+raw_ve_test <- as.numeric(c(lm1_raw[3],lm3_raw[3],lm3_raw[3],lm4_raw[3],lm5_raw[3], lm6_raw[3],lm7_raw[3], lm8_raw[3],lm9_raw[3]))
+new_ve_train <- as.numeric(c(lm1_new[2],lm2_new[2],lm3_new[2],lm4_new[2],lm5_new[2], lm6_new[2],lm7_new[2], lm8_new[2],lm9_new[2] ))
+new_ve_test <- as.numeric(c(lm1_new[3],lm2_new[3],lm3_new[3],lm4_new[3],lm5_new[3], lm6_new[3],lm7_new[3], lm8_new[3],lm9_new[3]))
+```
+
+
+```{r}
+df1 <- data.frame('Feature' = c("Cement",
+                 "Blast Furnace Slag",
+                 "Fly Ash",
+                 "Water",
+                 "Superplasticizer ",
+                 "Coarse Aggregate",
+                 "Fine Aggregate",
+                 "Age",
+                 "All 8 features"),
+           'VE on train(raw)' = raw_ve_train,
+           'VE on test(raw)' = raw_ve_test,
+           'VE on train(processed)' = new_ve_train,
+           'VE on test(processed)' = new_ve_test
+)
+
+library(flextable)
+library(magrittr)
+
+df1 %>% regulartable() %>% autofit()
+```
+
+
+• The same models that accurately predicted the training data do not accurately predict the testing data. From the Variance Explained table above, the uni-variate linear model of feature `Cement` has $VE=0.18745207$ on the raw training data, but $VE = 0.02018686$ on the raw testing data. The model predicting the training is much better than predicting the testing data.
+
+• Different models do take longer to train or require different  hyperparameter values. The learning rates of different models are different: the step size used on models are different. Also the data given may not be the same. In this assignment, basically, the models using pre-processed data have larger learning rates than those using raw data. 
+
+• Pre-processing changed the scale and distribution of the data. It made the scales similar among different features, and dealt with those outliers. According to the Variance Explained table above, the model using pre-processed data perform better than those using the raw data.
+
+### Conclusion
+
+According to the table provided above:
+
+`Cement` has the highest positive R-squared values. So it is the most important factor to predict concrete compressive strength.
+
+`Water`, `Superplasticizer` and `Age` also have some high R-sqaured values on uni-variate models, so may also be important for predicting.
+
+`Fine Aggregate` and `Coarse Aggregate` are less important.
+
+`Blast Furnace Slag` and `Fly Ash` got negative or quite small values, it shows that they are not important factors for predicting.
+
+To make the hardest possible concrete, changing the value of `Cement`. `Water`, `Superplasticizer` and `Age` would be helpful. According to the correlations, I would suggest increasing the value of `Cement`, and may consider about increasing `Superplasticizer` and 'Age', decreasing `Water` as well.
